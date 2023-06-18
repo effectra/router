@@ -1,0 +1,26 @@
+{
+  "name": "effectra/router",
+  "description": "The Effectra Routing package.",
+  "type": "library",
+  "license": "MIT",
+  "autoload": {
+    "psr-4": {
+      "Effectra\\Router\\": "src/"
+    }
+  },
+  "authors": [
+    {
+      "name": "Mohammed Taha",
+      "email": "bmt.mohammedtaha@gmail.com"
+    }
+  ],
+  "require": {
+    "psr/http-factory": "^1.0",
+    "psr/http-message": "^1.1",
+    "psr/http-server-handler": "^1.0",
+    "psr/http-server-middleware": "^1.0",
+    "bmt/plural-converter": "1.0",
+    "effectra/http-server-handler":"1.0"
+  },
+  "minimum-stability": "dev"
+}

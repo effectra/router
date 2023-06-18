@@ -20,7 +20,8 @@
     "psr/http-server-handler": "^1.0",
     "psr/http-server-middleware": "^1.0",
     "bmt/plural-converter": "1.0",
-    "effectra/http-server-handler":"1.0"
+    "effectra/http-server-handler":"1.0",
+    "effectra/http-message": "^2.0"
   },
   "minimum-stability": "dev"
 }

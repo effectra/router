@@ -7,7 +7,7 @@ namespace Effectra\Router;
 use Effectra\Contracts\Http\RouterDispatcher;
 
 /**
- * @method \Effectra\Router\Middleware  middleware(string|MiddlewareInterface $middlewareClass): self
+ * @method  \Effectra\Router\Middleware middleware(string|MiddlewareInterface $middlewareClass): self
  * 
  * @method  \Effectra\Router\Utils group(string $common_route, $controller, array $methods): self
  * @method  \Effectra\Router\Utils crud(string $route, $controller, string $actions): self
@@ -23,6 +23,7 @@ use Effectra\Contracts\Http\RouterDispatcher;
  * @method  \Effectra\Router\Register any(string $pattern, array|callable $callback): self
  * @method  \Effectra\Router\Register register(string $method, string $pattern, array|callable $callback): self
  * @method  \Effectra\Router\Register routes(): array
+ * @method  \Effectra\Router\Register name(): self
  * @method  \Effectra\Router\Register getArguments(string $route_parts, string $pattern_parts): array
  * 
  * @method \Effectra\Router\Dispatcher addArguments(array $args): void

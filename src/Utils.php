@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Effectra\Router;
 
+use Bmt\PluralConverter\PluralConverter;
 use Exception;
 
 trait Utils
@@ -29,13 +30,21 @@ trait Utils
      */
     public function auth(string $pattern, $controller): self
     {
-        $this->group($pattern, $controller, [
-            ['post|login' => 'login'],
-            ['post|register' => 'register'],
-            ['post|forget-password' => 'forgotPassword'],
-            ['post|reset-password' => 'resetPassword'],
-            ['post|logout' => 'logout'],
-        ]);
+        $patterns = [
+            'login', 'logout', 'register',
+            'verify/token', 'verify/code', 'verify/url',
+            'reset-password',
+            'send/code-email', 'send/code-phone', 'send/active-url'
+        ];
+        $methods = [
+            'login', 'logout', 'register',
+            'verifyToken', 'verifyCode', 'verifyUrl',
+            'resetPassword',
+            'sendCodeEmail', 'sendCodePhone', 'sendActiveUrl'
+        ];
+        for ($__i__ = 0; $__i__ < count($patterns); $__i__++) {
+            $this->post($this->remakeRoute($pattern) . '/' . $patterns[$__i__], [$controller, $methods[$__i__]]);
+        }
         return $this;
     }
     /**
@@ -76,7 +85,6 @@ trait Utils
             $route = trim(end($ext_route));
 
             if (method_exists($controller, $action)) {
-
                 $this->$method($common_route . '/' . $route, [$controller, $action]);
             }
         }
@@ -104,10 +112,10 @@ trait Utils
 
         foreach ($actions_arr as $action) {
             if (in_array($action, $this->actions)) {
+                $converter = new PluralConverter();
 
                 if (method_exists($controller, $action) && $action === 'read') {
-
-                    $this->get($route . 's', [$controller, 'read']);
+                    $this->get($converter->convertToPlural($route), [$controller, 'read']);
                 }
                 if (method_exists($controller, $action) && $action === 'readOne') {
 
@@ -123,15 +131,14 @@ trait Utils
                 }
                 if (method_exists($controller, $action) && $action === 'deleteAll') {
 
-                    $this->delete($route . '/delete-all', [$controller, 'deleteAll']);
+                    $this->delete($converter->convertToPlural($route) . '/delete-all', [$controller, 'deleteAll']);
                 }
                 if (method_exists($controller, $action) && $action === 'update') {
 
                     $this->put($route . '/update/{id}', [$controller, 'update']);
                 }
                 if (method_exists($controller, $action) && $action === 'search') {
-
-                    $this->get($route . 's/search', [$controller, 'search']);
+                    $this->get($converter->convertToPlural($route) . '/search', [$controller, 'search']);
                 }
             }
         }

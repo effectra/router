@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Effectra\Router;
 
-use Exception;
 
 trait Register
 {
@@ -13,16 +12,15 @@ trait Register
      *
      * @var array
      */
-    public array $routes = [];
+    protected array $routes = [];
     /**
      * An array of route names to be excluded from the route list.
      *
      * @var array
      */
-    public array $exclude_names = [
+    protected array $exclude_names = [
         'api',
     ];
-
 
     /**
      * Remake a route by correcting slashes, removing query parameters, and trimming leading/trailing slashes.
@@ -42,6 +40,19 @@ trait Register
         return trim(rtrim($route, '/'), '/');
     }
 
+    public function routeId($method, $pattern)
+    {
+        // Replace dynamic segments with a placeholder
+        $pattern = preg_replace('/\{(\w+)\}/', '{_}', $pattern);
+
+        // Generate an ID by concatenating the method name and modified pattern
+        $id = $method . '_' . $pattern;
+
+        // Remove any special characters or slashes from the ID
+        $id = preg_replace('/[^a-zA-Z0-9]/', '', $id);
+
+        return $id;
+    }
 
     /**
      * Correct a route by replacing multiple slashes and backslashes with a single slash.
@@ -63,16 +74,18 @@ trait Register
      */
     public function setPreRoute(string $preRoute): void
     {
-        $preRoute = rtrim($preRoute, '/') . '/';
-        $routes = $this->routes;
-        $this->routes = [];
-
-        foreach ($routes as $method => $routeMap) {
-            foreach ($routeMap as $pattern => $callback) {
-                $this->routes[$method][$this->correctRoute($preRoute . $pattern)] = $callback;
-            }
+        $preRoute = rtrim($preRoute, '/');
+        $newRoutes = [];
+        foreach ($this->routes as $route) {
+            $id = $this->routeId($route['method'], $preRoute . $route['pattern']);
+            $route['id'] = $id;
+            $route['pre_pattern'] = $preRoute;
+            $route['length'] =  $this->getLength($preRoute . '/' . $route['pattern']);
+            $newRoutes[] = $route;
         }
+        $this->routes = $newRoutes;
     }
+
 
 
     /**
@@ -163,35 +176,10 @@ trait Register
         return $this;
     }
 
-    /**
-     * Get the registered routes in a structured format.
-     *
-     * @return array An array of registered routes with method, pattern, and controller information.
-     */
-    public function getRegisteredRoutes(): array
+    public function name(string $name): self
     {
-        $registeredRoutes = [];
-
-        foreach ($this->routes as $method => $routes) {
-            foreach ($routes as $pattern => $callback) {
-                $controller = '';
-                if (is_array($callback)) {
-                    $firstParam = reset($callback);
-
-                    if (is_object($firstParam)) {
-                        $controller = get_class($firstParam);
-                    }
-                }
-
-                $registeredRoutes[] = [
-                    'method' => $method,
-                    'pattern' => $pattern,
-                    'controller' => $controller ?: 'Closure',
-                ];
-            }
-        }
-
-        return $registeredRoutes;
+        $this->routes[count($this->routes) - 1]['name'] = $name;
+        return $this;
     }
 
     /**
@@ -204,8 +192,46 @@ trait Register
      */
     public function register(string $method, string $pattern, $callback): self
     {
-        $this->routes[$method][$this->remakeRoute($pattern)] = $callback;
+        $id = $this->routeId($method, $pattern);
+        $args = $this->getSegmentFromPattern($pattern);
+        $this->routes[] = [
+            'id' => $id,
+            'name' => '',
+            'method' => $method,
+            'pre_pattern' => '',
+            'length' => $this->getLength($pattern),
+            'full_pattern' => $this->remakeRoute($pattern),
+            'pattern' => $this->remakeRoute($pattern),
+            'args' => $args,
+            'callback' => $callback,
+            'callback_type' => $this->callbackType($callback),
+            'controller' => $this->callbackType($callback) === 'closure' ? $callback[0] : null,
+            'controller_method' => $this->callbackType($callback) === 'closure' ? $callback[1] : null,
+            'middleware' => []
+        ];
         return $this;
+    }
+
+    public function getLength($pattern)
+    {
+        return count(explode('/', $pattern));
+    }
+
+    public function callbackType($callback)
+    {
+        if (is_callable($callback)) {
+            return 'callable';
+        }
+
+        if (is_array($callback)) {
+            return 'closure';
+        }
+
+        if (is_string($callback)) {
+            return 'string';
+        }
+
+        return 'undefined';
     }
 
     /**
@@ -241,27 +267,12 @@ trait Register
     {
         $args = [];
         $parts = $this->segmentRoute($pattern_parts);
-
         for ($i = 0; $i < count($parts); $i++) {
             if (str_contains($parts[$i], '{')) {
                 $args[$this->getSegmentFromPattern($parts[$i])[0]] = $this->segmentRoute($route_parts)[$i];
             }
         }
-
         return $args;
-    }
-
-
-    /**
-     * Check if the number of segments in the URL matches the number of segments in the pattern.
-     *
-     * @param string $url The URL to compare.
-     * @param string $pattern The pattern to compare.
-     * @return bool True if the number of segments is equal, false otherwise.
-     */
-    private function countSegmentsIsEquals(string $url, string $pattern): bool
-    {
-        return count($this->segmentRoute($url)) === count($this->segmentRoute($pattern));
     }
 
 
@@ -278,17 +289,6 @@ trait Register
 
 
     /**
-     * Check if the pattern contains route segments.
-     *
-     * @param string $pattern The pattern to check.
-     * @return bool True if the pattern contains segments, false otherwise.
-     */
-    private function checkIfIsRouteWithSegment(string $pattern): bool
-    {
-        return !empty($this->getSegmentFromPattern($pattern));
-    }
-
-    /**
      * Clear the prefix names from the given data.
      *
      * @param array $data The data to be filtered.
@@ -297,50 +297,6 @@ trait Register
     public function clearPrefixName(array $data): array
     {
         return array_filter($data, fn ($name) => !in_array($name, $this->exclude_names));
-    }
-
-
-    /**
-     * Get the matching route pattern if the method and URL match.
-     *
-     * @param string $method The HTTP method.
-     * @param string $url The URL to match.
-     * @return string|null The matching route pattern, or null if no match is found.
-     * @throws Exception If no routes are registered.
-     */
-    public function getRouteIfTheSame(string $method, string $url): ?string
-    {
-        if (empty($this->routes())) {
-            throw new Exception('No Routes Registered!');
-        }
-
-        foreach ($this->routes[$method] as $pattern => $callback) {
-            if ($this->countSegmentsIsEquals($url, $pattern) && $pattern !== '/') {
-                $segment = $this->clearPrefixName($this->removeArgumentFromPattern($this->segmentRoute($pattern)));
-                $clean = $this->clearPrefixName($this->segmentRoute($url));
-
-                $s_1 = implode('', $segment);
-                $s_2 = implode('', array_slice($clean, 0, count($segment)));
-
-                if ($s_1 === $s_2) {
-                    return $pattern;
-                }
-            }
-        }
-
-        return null;
-    }
-
-
-    /**
-     * Removes arguments from the pattern array that do not contain '{'.
-     *
-     * @param array $patternArray The pattern array to process.
-     * @return array The modified pattern array with arguments removed.
-     */
-    private function removeArgumentFromPattern(array $patternArray): array
-    {
-        return array_filter($patternArray, fn ($value) => !str_contains($value, '{'));
     }
 
     /**
@@ -355,40 +311,61 @@ trait Register
         $this->exclude_names = array_merge($this->exclude_names, $patterns);
     }
 
-    /**
-     * Find the correct action to execute based on the given URI path and request method.
-     *
-     * @param string $uri_path A string representing the URI path that the request is being made to.
-     * @param string $method A string representing the HTTP request method (e.g. GET, POST, PUT, DELETE, etc.)
-     *
-     * @return mixed function representing the action that should be taken for the given URI path and request method, or null if no action is found.
-     */
+
     public function getAction(string $uri_path, string $method)
     {
-        $route = $this->remakeRoute($uri_path);
+        $path = $this->remakeRoute($uri_path);
 
         $requestMethod = strtolower($method);
 
-        if ($uri_path == '/') {
-            return $this->routes[$requestMethod]['/'];
-        }
+        $length = $this->getLength($path);
 
-        $action = $this->routes[$requestMethod][$route] ?? null;
 
-        if (!$action) {
-            if ($pattern = $this->getRouteIfTheSame($requestMethod, $route)) {
-                if (
-                    $this->checkIfIsRouteWithSegment($pattern) &&
-                    $this->countSegmentsIsEquals($route, $pattern)
-                ) {
-                    $args = $this->getArguments($route, $pattern);
-                    $this->addArguments($args);
+        foreach ($this->routes as $route) {
+            $fullPattern = $route['pre_pattern'] . '/' . $route['pattern'];
 
-                    $action = $this->routes[$requestMethod][$pattern];
+            if ($requestMethod === $route['method']) {
+                if ($fullPattern === $path) {
+                    return $route;
+                }
+                if (count($route['args']) !== 0 && $length === $route['length']) {
+                    if ($this->matchRoutePattern($path, $fullPattern)) {
+                        $args = $this->getArguments($path, $fullPattern);
+                        $route['args'] = $args;
+                        $this->addArguments($args);
+                        return $route;
+                    }
                 }
             }
         }
 
-        return $action;
+        return null;
+    }
+    /**
+     * Match a given path against a route pattern.
+     *
+     * @param string $path The path to match.
+     * @param string $pattern The route pattern to match against.
+     * @return bool True if the path matches the pattern, false otherwise.
+     */
+    public function matchRoutePattern($path, $pattern)
+    {
+        // Escape the special characters in the pattern
+        $pattern = preg_quote($pattern, '/');
+
+        // Replace "{id}" in the pattern with a regular expression to match any number
+        $pattern = str_replace('\{id\}', '(\d+|\w+)', $pattern);
+
+        // Replace "{type}" in the pattern with a regular expression to match any word characters
+        $pattern = str_replace('\{type\}', '(\w+)', $pattern);
+
+        // Perform the regex match
+        if (preg_match('/^' . $pattern . '$/', $path, $matches)) {
+            // Match found
+            return true;
+        } else {
+            // No match found
+            return false;
+        }
     }
 }

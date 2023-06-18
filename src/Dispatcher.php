@@ -34,15 +34,10 @@ trait Dispatcher
      */
     protected $notFound;
 
-    /**
-     * @param ResponseInterface $response The response object.
-     */
-
+    
     public function __construct(
-        protected ResponseInterface  $response
     ) {
         $this->callback = new Callback();
-        $this->args = [];
     }
 
     /**
@@ -58,19 +53,14 @@ trait Dispatcher
         $uri_path = $request->getUri()->getPath();
         $method = strtolower($request->getMethod());
 
-        if (!empty($this->middleware)) {
-            // handle middleware
-            $this->response = $this->runMiddleware($this->middleware, $request, new RequestHandler($this->middleware));
-        }
+        // Determine the appropriate controller action for the request.
+        $action = $this->getAction($uri_path, $method);
 
         // Add any query string arguments to the internal argument list.
         $this->addArguments($request->getQueryParams());
 
-        // Determine the appropriate controller action for the request.
-        $action = $this->getAction($uri_path, $method);
-
         // Get the callback function for the selected controller action.
-        $callback = $this->callback->getCallback($action);
+        $callback = isset($action['callback']) ? $this->callback->getCallback($action['callback']) : null;
 
         // Pass the request, response, and arguments to the controller action.
         $pass = $this->pass((object) $this->args);
@@ -89,6 +79,11 @@ trait Dispatcher
 
         // Execute the controller action and return the resulting response.
         $response = $this->process($callback, $pass);
+
+        if (!empty($action['middleware'])) {
+            // handle middleware
+            $response = $this->runMiddleware($request, new RequestHandler($response, $action['middleware']));
+        }
 
         return $response;
     }
@@ -180,7 +175,6 @@ trait Dispatcher
     {
         $this->notFound = $response;
     }
-
 
     /**
      * Sets the specified callback as the response returned when an internal server error occurs.

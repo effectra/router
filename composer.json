@@ -16,7 +16,7 @@
   ],
   "require": {
     "psr/http-factory": "^1.0",
-    "psr/http-message": "^1.1",
+    "psr/http-message": "^1.1 || ^2.0",
     "psr/http-server-handler": "^1.0",
     "psr/http-server-middleware": "^1.0",
     "bmt/plural-converter": "1.0",

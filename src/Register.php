@@ -322,7 +322,7 @@ trait Register
 
 
         foreach ($this->routes as $route) {
-            $fullPattern = $route['pre_pattern'] . '/' . $route['pattern'];
+            $fullPattern = $this->remakeRoute($route['pre_pattern'] . '/' . $route['pattern']);
 
             if ($requestMethod === $route['method']) {
                 if ($fullPattern === $path) {

@@ -18,6 +18,7 @@ trait Middleware
     protected array $middleware;
 
 
+
     /**
      * Set the middleware to be applied to all routes.
      *
@@ -31,7 +32,7 @@ trait Middleware
             throw new InvalidArgumentException("{$middlewareClass} is not a valid middleware class.");
         }
 
-        $this->routes[count($this->routes) - 1]['middleware'][] = $middlewareClass;;
+        $this->routes[count($this->routes) - 1]['middleware'][] = $middlewareClass;
 
         return $this;
     }
@@ -39,13 +40,13 @@ trait Middleware
     /**
      * Run the middleware stack for a given request and handler.
      *
-     * @param ServerRequestInterface $request The incoming HTTP request.
-     * @param RequestHandlerInterface $handler The request handler for the route.
+     * @param ServerRequestInterface $request
+     * @param RequestHandlerInterface $handler
      * @return ResponseInterface The response from the middleware stack.
      */
-    protected function runMiddleware(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
+    protected function runMiddleware(ServerRequestInterface $request,RequestHandlerInterface $handler): ResponseInterface
     {
-        return $handler->handle($request);
+         return $handler->handle($request);
     }
 
 }

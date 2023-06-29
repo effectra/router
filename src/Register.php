@@ -354,7 +354,7 @@ trait Register
         $pattern = preg_quote($pattern, '/');
 
         // Replace "{id}" in the pattern with a regular expression to match any number
-        $pattern = str_replace('\{id\}', '(\d+|\w+)', $pattern);
+        $pattern = str_replace('\{id\}', '(\d+)', $pattern);
 
         // Replace "{type}" in the pattern with a regular expression to match any word characters
         $pattern = str_replace('\{type\}', '(\w+)', $pattern);

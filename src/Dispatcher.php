@@ -7,22 +7,20 @@ namespace Effectra\Router;
 use Effectra\Http\Message\Stream;
 use Effectra\Http\Server\RequestHandler;
 use Effectra\Router\Exception\InvalidCallbackException;
-use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseInterface;
 
 trait Dispatcher
 {
+    /**
+     * @var ServerRequestInterface The request object.
+     */
+    private ServerRequestInterface $request;
 
     /**
-     * @var Callback The callback instance.
+     * @var ResponseInterface The response object.
      */
-    protected Callback $callback;
-
-    /**
-     * @var RequestInterface The request object.
-     */
-    private RequestInterface $request;
+    private ResponseInterface $response;
 
     /**
      * @var array The route arguments.
@@ -34,18 +32,20 @@ trait Dispatcher
      */
     protected $notFound;
 
-    
-    public function __construct(
-    ) {
+    /**
+     * Dispatcher constructor.
+     */
+    public function __construct()
+    {
         $this->callback = new Callback();
     }
 
     /**
-     * Dispatches the current request to the appropriate controller action and returns the HTTP response.
+     * Dispatches the server request and returns a response.
      *
-     * @param ServerRequestInterface $request The HTTP request to dispatch.
-     *
-     * @return ResponseInterface The HTTP response returned by the controller action.
+     * @param ServerRequestInterface $request The server request.
+     * @return ResponseInterface The response.
+     * @throws InvalidCallbackException If there is an error processing the response.
      */
     public function dispatch(ServerRequestInterface $request): ResponseInterface
     {
@@ -56,36 +56,69 @@ trait Dispatcher
         // Determine the appropriate controller action for the request.
         $action = $this->getAction($uri_path, $method);
 
-        // Add any query string arguments to the internal argument list.
-        $this->addArguments($request->getQueryParams());
-
         // Get the callback function for the selected controller action.
         $callback = isset($action['callback']) ? $this->callback->getCallback($action['callback']) : null;
 
-        // Pass the request, response, and arguments to the controller action.
-        $pass = $this->pass((object) $this->args);
 
-        // If no valid callback was found, return a 404 Not Found response.
+        $controller = new Controller($request, $this->response, $this->args, $callback);
+
+        // send 404 response if no callback
         if (!$callback) {
+
             if (!$this->notFound) {
-                $content = new Stream(HtmlRender::notFoundHTML());
 
-                return $this->response
-                    ->withStatus(404)
-                    ->withBody($content);
+               return $this->notFoundResponse();
+
             }
-            return call_user_func($this->notFound, $pass);
+
+            $controller->setCallback($this->notFound);
         }
 
-        // Execute the controller action and return the resulting response.
-        $response = $this->process($callback, $pass);
-
+        // handle router middlewares
         if (!empty($action['middleware'])) {
-            // handle middleware
-            $response = $this->runMiddleware($request, new RequestHandler($response, $action['middleware']));
+
+            $handler = new RequestHandler($this->response, $action['middleware']);
+
+            $responseMiddleware = $this->runMiddleware($this->request, $handler);
+
+            $controller->setRequest($handler->getLastRequest());
+
+            $response = $controller->handle();
+
+            $response = $this->compareResponses($this->response, $responseMiddleware) ? $response : $responseMiddleware;
+        } else {
+            $response = $controller->handle();
         }
+
+        // regenerate response if its string
+        if (is_string($response)) {
+            $response = $this->stringResponse($response);
+        }
+
 
         return $response;
+    }
+
+    /**
+     * Sets the HTTP request to be sent to the controller.
+     *
+     * @param ServerRequestInterface $request The HTTP request to send to the client.
+     * @return void
+     */
+    public function addRequest(ServerRequestInterface $request): void
+    {
+        $this->request = $request;
+    }
+
+    /**
+     * Sets the HTTP response to be sent to the controller.
+     *
+     * @param ResponseInterface $response The HTTP response to send to the client.
+     * @return void
+     */
+    public function addResponse(ResponseInterface $response): void
+    {
+        $this->response = $response;
     }
 
     /**
@@ -100,75 +133,11 @@ trait Dispatcher
         // Merge the specified arguments with the existing arguments.
         $this->args = array_merge($this->args, $args);
     }
-    /**
-     * Sets the HTTP request to be sent to the controller.
-     *
-     * @param RequestInterface $response The HTTP response to send to the client.
-     *
-     * @return void
-     */
-    public function addRequest(RequestInterface $request): void
-    {
-        $this->request = $request;
-    }
-    /**
-     * Sets the HTTP response to be sent to the controller.
-     *
-     * @param ResponseInterface $response The HTTP response to send to the client.
-     *
-     * @return void
-     */
-    public function addResponse(ResponseInterface $response): void
-    {
-        $this->response = $response;
-    }
-    /**
-     * Passes the server request to another part of the application for further processing.
-     *
-     * @param ServerRequestInterface $server_request The incoming server request object.
-     * @param ResponseInterface $response The response object to use for generating a response.
-     * @param array $args An array of route parameters extracted from the request URI.
-     *
-     * @return array An array containing the new request object, the original response object, and the route parameters.
-     */
-    public function pass(array|object $args)
-    {
-        return [
-            $this->request,
-            $this->response,
-            $args
-        ];
-    }
-
-    /**
-     * Calls the specified callback with the given parameters and returns the response.
-     *
-     * @param callable $callback The callback to call.
-     * @param array $pass The parameters to pass to the callback.
-     *
-     * @return ResponseInterface The response returned by the callback.
-     */
-    public function process(callable $callback, array $pass): ResponseInterface
-    {
-        $response = call_user_func_array($callback, $pass);
-
-        if (!$response) {
-            throw new InvalidCallbackException("Error Processing Response");
-        }
-        if (is_string($response)) {
-            $response = $this->response
-                ->withStatus(200)
-                ->withBody(new Stream($response))
-                ->withHeader('Content-type', ['text/html; charset=UTF-8']);
-        }
-        return  $response;
-    }
 
     /**
      * Sets the specified callback as the response returned when a route is not found.
      *
      * @param callable $response The callback to set as the not found response.
-     *
      * @return void
      */
     public function setNotFound(callable $response): void
@@ -180,11 +149,100 @@ trait Dispatcher
      * Sets the specified callback as the response returned when an internal server error occurs.
      *
      * @param callable $response The callback to set as the internal server error response.
-     *
      * @return void
      */
     public function setInternalServerError(callable $response): void
     {
         $this->internalServerError = $response;
+    }
+
+    /**
+     * Converts the request object.
+     *
+     * @param  ServerRequestInterface $request The request object to convert.
+     * @param  ServerRequestInterface $NewRequest The new request object to update.
+     * @return ServerRequestInterface The updated new request object.
+     */
+    public function convertRequest(ServerRequestInterface $request, ServerRequestInterface $NewRequest): ServerRequestInterface
+    {
+
+        $NewRequest = $NewRequest->withMethod($request->getMethod());
+        $NewRequest = $NewRequest->withUri($request->getUri());
+
+        foreach ($request->getHeaders() as $key => $value) {
+            $NewRequest = $NewRequest->withHeader($key, $value);
+        }
+
+        $NewRequest = $NewRequest->withBody($request->getBody());
+        $NewRequest = $NewRequest->withProtocolVersion($request->getProtocolVersion());
+        $NewRequest = $NewRequest->withQueryParams($request->getQueryParams());
+        $NewRequest = $NewRequest->withParsedBody($request->getParsedBody());
+
+        foreach ($request->getAttributes() as $key => $value) {
+            $NewRequest = $NewRequest->withAttribute($key, $value);
+        }
+
+        return $NewRequest;
+    }
+
+    /**
+     * Compares two response objects.
+     *
+     * @param ResponseInterface $response1 The first response object.
+     * @param ResponseInterface $response2 The second response object.
+     * @return bool True if the responses are equal, false otherwise.
+     */
+    public function compareResponses(ResponseInterface $response1, ResponseInterface $response2): bool
+    {
+        // Compare status codes
+        if ($response1->getStatusCode() !== $response2->getStatusCode()) {
+            return false;
+        }
+
+        // Compare headers
+        $headers1 = $response1->getHeaders();
+        $headers2 = $response2->getHeaders();
+
+        if (count($headers1) !== count($headers2)) {
+            return false;
+        }
+
+        foreach ($headers1 as $name => $values) {
+            if (!isset($headers2[$name]) || $headers1[$name] !== $headers2[$name]) {
+                return false;
+            }
+        }
+
+        // Compare bodies
+        $body1 = (string) $response1->getBody();
+        $body2 = (string) $response2->getBody();
+
+        return $body1 === $body2;
+    }
+
+    /**
+     * Generate a response with a string body.
+     *
+     * @param string $response The response string.
+     * @return ResponseInterface The generated response.
+     */
+    public function stringResponse(string $response): ResponseInterface
+    {
+        return $response = $this->response
+            ->withStatus(200)
+            ->withBody(new Stream($response))
+            ->withHeader('Content-type', ['text/html; charset=UTF-8']);
+    }
+
+    /**
+     * Generate a "Not Found" response.
+     *
+     * @return ResponseInterface The "Not Found" response.
+     */
+    public function notFoundResponse(): ResponseInterface
+    {
+        $content = new Stream(HtmlRender::notFoundHTML());
+
+        return $this->response->withStatus(404)->withBody($content);
     }
 }

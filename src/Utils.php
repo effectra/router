@@ -6,6 +6,7 @@ namespace Effectra\Router;
 
 use Bmt\PluralConverter\PluralConverter;
 use Exception;
+use Psr\Http\Server\MiddlewareInterface;
 
 trait Utils
 {
@@ -49,6 +50,7 @@ trait Utils
     }
     /**
      * Define a group of routes that share a common URL prefix.
+     *example `['get|info/{id}' => 'info']`
      *
      * @param string $common_route The common URL prefix for the group of routes.
      * @param mixed $controller The controller for the group of routes.
@@ -102,7 +104,7 @@ trait Utils
 
      *@return self Returns the instance of the Router.
      */
-    public function crud(string $route, $controller, string $actions): self
+    public function crud(string $route, $controller, string $actions, MiddlewareInterface|array $middlewares = []): self
     {
         $route = $this->remakeRoute($route);
 
@@ -115,30 +117,67 @@ trait Utils
                 $converter = new PluralConverter();
 
                 if (method_exists($controller, $action) && $action === 'read') {
+
                     $this->get($converter->convertToPlural($route), [$controller, 'read']);
+                    if (!empty($middlewares)) {
+                        foreach ($middlewares as $middleware) {
+                            $this->middleware($middleware);
+                        }
+                    }
                 }
                 if (method_exists($controller, $action) && $action === 'readOne') {
 
                     $this->get($route . '/{id}', [$controller, 'readOne']);
+                    if (!empty($middlewares)) {
+                        foreach ($middlewares as $middleware) {
+                            $this->middleware($middleware);
+                        }
+                    }
                 }
                 if (method_exists($controller, $action) && $action === 'create') {
 
                     $this->post($route . '/create', [$controller, 'create']);
+                    if (!empty($middlewares)) {
+                        foreach ($middlewares as $middleware) {
+                            $this->middleware($middleware);
+                        }
+                    }
                 }
                 if (method_exists($controller, $action) && $action === 'delete') {
 
                     $this->delete($route . '/delete/{id}', [$controller, 'delete']);
+                    if (!empty($middlewares)) {
+                        foreach ($middlewares as $middleware) {
+                            $this->middleware($middleware);
+                        }
+                    }
                 }
                 if (method_exists($controller, $action) && $action === 'deleteAll') {
 
                     $this->delete($converter->convertToPlural($route) . '/delete-all', [$controller, 'deleteAll']);
+                    if (!empty($middlewares)) {
+                        foreach ($middlewares as $middleware) {
+                            $this->middleware($middleware);
+                        }
+                    }
                 }
                 if (method_exists($controller, $action) && $action === 'update') {
 
                     $this->put($route . '/update/{id}', [$controller, 'update']);
+                    if (!empty($middlewares)) {
+                        foreach ($middlewares as $middleware) {
+                            $this->middleware($middleware);
+                        }
+                    }
                 }
                 if (method_exists($controller, $action) && $action === 'search') {
+
                     $this->get($converter->convertToPlural($route) . '/search', [$controller, 'search']);
+                    if (!empty($middlewares)) {
+                        foreach ($middlewares as $middleware) {
+                            $this->middleware($middleware);
+                        }
+                    }
                 }
             }
         }

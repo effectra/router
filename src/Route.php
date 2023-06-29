@@ -10,7 +10,7 @@ use Effectra\Contracts\Http\RouterDispatcher;
  * @method  \Effectra\Router\Middleware middleware(string|MiddlewareInterface $middlewareClass): self
  * 
  * @method  \Effectra\Router\Utils group(string $common_route, $controller, array $methods): self
- * @method  \Effectra\Router\Utils crud(string $route, $controller, string $actions): self
+ * @method  \Effectra\Router\Utils crud(string $route, $controller, string $actions, ?MiddlewareInterface|array $middleware = null): self
  * @method  \Effectra\Router\Utils auth(string $pattern, $controller): self
  * 
  * @method  \Effectra\Router\Register setPreRoute(string $preRoute): void
@@ -27,13 +27,13 @@ use Effectra\Contracts\Http\RouterDispatcher;
  * @method  \Effectra\Router\Register getArguments(string $route_parts, string $pattern_parts): array
  * 
  * @method \Effectra\Router\Dispatcher addArguments(array $args): void
- * @method \Effectra\Router\Dispatcher addRequest(RequestInterface $request): void
+ * @method \Effectra\Router\Dispatcher addRequest(ServerRequestInterface $request): void
  * @method \Effectra\Router\Dispatcher addResponse(ResponseInterface $response): void
  * @method \Effectra\Router\Dispatcher setNotFound(callable $response): void
  * @method \Effectra\Router\Dispatcher setInternalServerError(callable $response): void
  */
 
-class Route implements RouterDispatcher
+class Route 
 {
     use Dispatcher, Register, Middleware, Utils;
 }

@@ -146,9 +146,9 @@ class Controller
      *
      * @throws InvalidCallbackException If the callback is not set.
      *
-     * @return ResponseInterface The response.
+     * @return ResponseInterface|string The response returned from controller.
      */
-    public function handle(): ResponseInterface
+    public function handle(): ResponseInterface|string
     {
         $this->args = array_merge($this->args, $this->request->getQueryParams());
 

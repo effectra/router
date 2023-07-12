@@ -41,6 +41,16 @@ trait Dispatcher
     }
 
     /**
+     * set router container for binding and injected dependencies of controller class
+     * @param $container
+     * @return void
+     */
+    public function setContainer($container): void
+    {
+        $this->callback->setContainer($container);
+    }
+
+    /**
      * Dispatches the server request and returns a response.
      *
      * @param ServerRequestInterface $request The server request.

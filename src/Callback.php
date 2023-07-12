@@ -11,6 +11,20 @@ use Exception;
  */
 class Callback
 {
+    protected $container = null;
+
+    protected bool $isUseContainer = false;
+
+    /**
+     * set router container for binding and injected dependencies of controller class
+     * @param $container
+     * @return void
+     */
+    public function setContainer($container): void
+    {
+        $this->container = $container;
+        $this->isUseContainer = true;
+    }
     /**
      * Get the callback for the given action.
      *
@@ -70,7 +84,31 @@ class Callback
         [$class, $method] = $action;
 
         if (class_exists($class)) {
-            $classInstance = new $class();
+            if ($this->isUseContainer) {
+                $reflection = new \ReflectionClass($class);
+                $constructor = $reflection->getConstructor();
+                // Get the parameters of the constructor
+                $parameters = $constructor->getParameters();
+                $dependencies = [];
+                foreach ($parameters as $parameter) {
+                    $parameterType = $parameter->getType();
+
+                    // Check if the parameter has a type
+                    if ($parameterType !== null) {
+                        // Get the name of the dependency class
+                        $dependencyClass = $parameterType->getName();
+
+                        // Resolve the dependency instance from the container
+                        $dependencyInstance = $this->container->get($dependencyClass);
+
+                        // Add the dependency instance to the array
+                        $dependencies[] = $dependencyInstance;
+                    }
+                }
+                $classInstance = new $class($dependencies);
+            } else {
+                $classInstance = new $class();
+            }
 
             if (method_exists($classInstance, $method)) {
                 return [$classInstance, $method];
@@ -78,7 +116,7 @@ class Callback
                 throw new Exception("Method not found: {$class}::{$method}");
             }
         } else {
-            throw new Exception("Controller class not found: {$class}");
+            throw new Exception("Controller class {$class} not found");
         }
     }
 

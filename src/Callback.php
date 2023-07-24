@@ -87,25 +87,30 @@ class Callback
             if ($this->isUseContainer) {
                 $reflection = new \ReflectionClass($class);
                 $constructor = $reflection->getConstructor();
-                // Get the parameters of the constructor
-                $parameters = $constructor->getParameters();
-                $dependencies = [];
-                foreach ($parameters as $parameter) {
-                    $parameterType = $parameter->getType();
+                if ($constructor) {
+                    // Get the parameters of the constructor
+                    $parameters = $constructor->getParameters();
+                    $dependencies = [];
+                    foreach ($parameters as $parameter) {
+                        $parameterType = $parameter->getType();
 
-                    // Check if the parameter has a type
-                    if ($parameterType !== null) {
-                        // Get the name of the dependency class
-                        $dependencyClass = $parameterType->getName();
+                        // Check if the parameter has a type
+                        if ($parameterType !== null) {
+                            // Get the name of the dependency class
+                            $dependencyClass = $parameterType->getName();
 
-                        // Resolve the dependency instance from the container
-                        $dependencyInstance = $this->container->get($dependencyClass);
+                            // Resolve the dependency instance from the container
+                            $dependencyInstance = $this->container->get($dependencyClass);
 
-                        // Add the dependency instance to the array
-                        $dependencies[] = $dependencyInstance;
+                            // Add the dependency instance to the array
+                            $dependencies[] = $dependencyInstance;
+                        }
                     }
+                    $classInstance = new $class(...$dependencies);
                 }
-                $classInstance = new $class($dependencies);
+                else {
+                    $classInstance = new $class();
+                }
             } else {
                 $classInstance = new $class();
             }

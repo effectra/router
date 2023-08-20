@@ -24,8 +24,11 @@ require_once 'vendor/autoload.php';
 
 ```php
 use Effectra\Router\Route;
+use Effectra\Router\RouteGroup;
+
 use Effectra\Http\Foundation\RequestFoundation;
 use Effectra\Http\Message\Response;
+
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 ```
@@ -63,13 +66,10 @@ $route->crud('/report', ReportController::class, 'read|readOne|create|delete|del
 
 $route->auth('/auth/', AuthController::class);
 
-$route->group('/file/upload/', UploadController::class, [
-    //['method|pattern' => 'method']
-    ['post|pic' => 'pic'],
-    ['post|audio' => 'audio'],
-    ['post|video' => 'video'],
-    ['post|doc' => 'doc'],
-]);
+$route->group('/file/upload/', UploadController::class, function(RouteGroup $router){
+    $router->post('audio','createAudio');
+    $router->post('video','createVideo');
+});
 ```
 
 5. Dispatch the incoming request:

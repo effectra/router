@@ -48,50 +48,21 @@ trait Utils
         }
         return $this;
     }
+
     /**
-     * Define a group of routes that share a common URL prefix.
-     *example `['get|info/{id}' => 'info']`
+     * Create a group of routes with a common prefix.
      *
-     * @param string $common_route The common URL prefix for the group of routes.
-     * @param mixed $controller The controller for the group of routes.
-     * @param array $methods An array of HTTP methods and route patterns for the group of routes.
-     * @return $this
-     * @throws Exception if the route
-
+     * @param string $path The common prefix for routes in this group.
+     * @param string|object $controller The controller class name or instance.
+     * @param callable $routes A callable that defines routes within the group.
+     * @return self Returns the current Route instance.
      */
-    public function group(string $common_route, $controller, array $methods): self
+    public function group(string $path, $controller, callable $routes): self
     {
-        $common_route = $this->remakeRoute($common_route);
-
-        foreach ($methods as $m) {
-
-            if (!is_array($m)) {
-                throw new Exception("Only array passed, like ['get|info/{id}' => 'info'] ");
-            }
-
-            if (!str_contains(key($m), '|')) {
-                throw new Exception("Separator '|' not found");
-            }
-
-            $ext_route = explode('|', key($m));
-
-            $action = $m[key($m)];
-
-            $method = trim($ext_route[0]);
-
-            if (!in_array($method, $this->methods)) {
-
-                throw new Exception("Http Method not exists !");
-            }
-
-            $route = trim(end($ext_route));
-
-            if (method_exists($controller, $action)) {
-                $this->$method($common_route . '/' . $route, [$controller, $action]);
-            }
-        }
+        call_user_func_array($routes, [new RouteGroup($path, $controller, $this)]);
         return $this;
     }
+
     /**
 
      *Define a group of CRUD routes that share a common URL prefix.

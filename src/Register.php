@@ -60,7 +60,7 @@ trait Register
      * @param string $route The route to correct.
      * @return string The corrected route.
      */
-    private function correctRoute(string $route): string
+    public function correctRoute(string $route): string
     {
         return $route = str_replace(['//', '\\', '///'], '/', $route);
     }

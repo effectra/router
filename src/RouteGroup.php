@@ -33,7 +33,8 @@ class RouteGroup
      */
     public function get(string $pattern, string $method): void
     {
-        $this->router->get($this->prePath . $pattern, [$this->controller, $method]);
+        $newPattern = $this->router->correctRoute($this->prePath . $pattern);
+        $this->router->get($newPattern, [$this->controller, $method]);
     }
 
     /**
@@ -45,7 +46,8 @@ class RouteGroup
      */
     public function post(string $pattern, string $method): void
     {
-        $this->router->post($this->prePath . $pattern, [$this->controller, $method]);
+        $newPattern = $this->router->correctRoute($this->prePath . $pattern);
+        $this->router->post($newPattern, [$this->controller, $method]);
     }
 
     /**
@@ -57,7 +59,8 @@ class RouteGroup
      */
     public function put(string $pattern, string $method): void
     {
-        $this->router->put($this->prePath . $pattern, [$this->controller, $method]);
+        $newPattern = $this->router->correctRoute($this->prePath . $pattern);
+        $this->router->put($newPattern, [$this->controller, $method]);
     }
 
     /**
@@ -69,7 +72,8 @@ class RouteGroup
      */
     public function delete(string $pattern, string $method): void
     {
-        $this->router->delete($this->prePath . $pattern, [$this->controller, $method]);
+        $newPattern = $this->router->correctRoute($this->prePath . $pattern);
+        $this->router->delete($newPattern, [$this->controller, $method]);
     }
 
     /**
@@ -81,7 +85,8 @@ class RouteGroup
      */
     public function patch(string $pattern, string $method): void
     {
-        $this->router->patch($this->prePath . $pattern, [$this->controller, $method]);
+        $newPattern = $this->router->correctRoute($this->prePath . $pattern);
+        $this->router->patch($newPattern, [$this->controller, $method]);
     }
 
     /**
@@ -93,7 +98,8 @@ class RouteGroup
      */
     public function options(string $pattern, string $method): void
     {
-        $this->router->options($this->prePath . $pattern, [$this->controller, $method]);
+        $newPattern = $this->router->correctRoute($this->prePath . $pattern);
+        $this->router->options($newPattern, [$this->controller, $method]);
     }
 
     /**
@@ -105,6 +111,7 @@ class RouteGroup
      */
     public function any(string $pattern, string $method): void
     {
-        $this->router->any($this->prePath . $pattern, [$this->controller, $method]);
+        $newPattern = $this->router->correctRoute($this->prePath . $pattern);
+        $this->router->any($newPattern, [$this->controller, $method]);
     }
 }

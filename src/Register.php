@@ -312,14 +312,17 @@ trait Register
     }
 
 
-    public function getAction(string $uri_path, string $method)
+    /**
+     * get the correct route
+     * @param string $uri_path the uri path
+     * @param string $method the http method
+     * @return null|array the correct route for uri or null if not exists
+     */
+    public function getAction(string $uri_path, string $method): ?array
     {
         $path = $this->remakeRoute($uri_path);
 
         $requestMethod = strtolower($method);
-
-        $length = $this->getLength($path);
-
 
         foreach ($this->routes as $route) {
             $fullPattern = $this->remakeRoute($route['pre_pattern'] . '/' . $route['pattern']);
@@ -328,7 +331,10 @@ trait Register
                 if ($fullPattern === $path) {
                     return $route;
                 }
-                if (count($route['args']) !== 0 && $length === $route['length']) {
+                if (
+                    count($route['args']) !== 0 &&
+                    $this->getLength($path) === $this->getLength($fullPattern)
+                ) {
                     if ($this->matchRoutePattern($path, $fullPattern)) {
                         $args = $this->getArguments($path, $fullPattern);
                         $route['args'] = $args;
@@ -348,16 +354,19 @@ trait Register
      * @param string $pattern The route pattern to match against.
      * @return bool True if the path matches the pattern, false otherwise.
      */
-    public function matchRoutePattern($path, $pattern)
+    public function matchRoutePattern(string $path, string $pattern): bool
     {
         // Escape the special characters in the pattern
         $pattern = preg_quote($pattern, '/');
 
-        // Replace "{id}" in the pattern with a regular expression to match any number
-        $pattern = str_replace('\{id\}', '(\d+)', $pattern);
-
-        // Replace "{type}" in the pattern with a regular expression to match any word characters
-        $pattern = str_replace('\{type\}', '(\w+)', $pattern);
+        // Replace "{args}" in the pattern with a regular expression to match any number
+        foreach ($this->getSegmentFromPattern($pattern) as $arg) {
+            $pattern = str_replace(
+                sprintf('\{%s}', $arg),
+                $arg !== 'id' ? '(\w+)' : '(\d+)',
+                $pattern
+            );
+        }
 
         // Perform the regex match
         if (preg_match('/^' . $pattern . '$/', $path, $matches)) {

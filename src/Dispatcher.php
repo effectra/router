@@ -31,6 +31,7 @@ trait Dispatcher
      * @var mixed The value for the not found route.
      */
     protected $notFound;
+    
 
     /**
      * Dispatcher constructor.
@@ -38,16 +39,6 @@ trait Dispatcher
     public function __construct()
     {
         $this->callback = new Callback();
-    }
-
-    /**
-     * set router container for binding and injected dependencies of controller class
-     * @param $container
-     * @return void
-     */
-    public function setContainer($container): void
-    {
-        $this->callback->setContainer($container);
     }
 
     /**
@@ -104,7 +95,6 @@ trait Dispatcher
         if (is_string($response)) {
             $response = $this->stringResponse($response);
         }
-
 
         return $response;
     }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Effectra\Router;
 
 use Effectra\Contracts\Http\RouterDispatcher;
+use Psr\Container\ContainerInterface;
 
 /**
  * @method  \Effectra\Router\Middleware middleware(string|MiddlewareInterface $middlewareClass): self
@@ -33,7 +34,19 @@ use Effectra\Contracts\Http\RouterDispatcher;
  * @method \Effectra\Router\Dispatcher setInternalServerError(callable $response): void
  */
 
-class Route 
+class Route
 {
+    /**
+     * Set the dependency injection container for the Resolver class.
+     *
+     * @param \Psr\Container\ContainerInterface $container The dependency injection container to set.
+     * @return void
+     * @throws \RuntimeException If the Resolver class is not initialized.
+     */
+    public static function setContainer(ContainerInterface $container): void
+    {
+        Resolver::setContainer($container);
+    }
+
     use Dispatcher, Register, Middleware, Utils;
 }

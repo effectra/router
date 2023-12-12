@@ -5,11 +5,116 @@ declare(strict_types=1);
 namespace Effectra\Router;
 
 use Bmt\PluralConverter\PluralConverter;
-use Exception;
 use Psr\Http\Server\MiddlewareInterface;
 
 trait Utils
 {
+    /**
+     * @var ((string|false)[]|(string|true)[])[] $authRoutes
+     */
+    private static  $authRoutes = [
+        'login' => [
+            'pattern' => 'login',
+            'method' => 'post',
+            'useMiddleware' => false
+        ],
+        'logout' => [
+            'pattern' => 'logout',
+            'method' => 'post',
+            'useMiddleware' => true
+        ],
+        'register' => [
+            'pattern' => 'register',
+            'method' => 'post',
+            'useMiddleware' => false
+        ],
+        'tokenVerify' => [
+            'pattern' => 'token/verify',
+            'method' => 'get',
+            'useMiddleware' => false
+        ],
+        'forgotPassword' => [
+            'pattern' => 'forgot-password',
+            'method' => 'post',
+            'useMiddleware' => false
+        ],
+        'resetPassword' => [
+            'pattern' => 'reset-password/{token}',
+            'method' => 'get',
+            'useMiddleware' => false
+        ],
+        'profile' => [
+            'pattern' => 'profile',
+            'method' => 'get',
+            'useMiddleware' => true
+        ],
+        'profileUpdate' => [
+            'pattern' => 'profile/update',
+            'method' => 'put',
+            'useMiddleware' => true
+        ],
+        'profileChangePassword' => [
+            'pattern' => 'profile/change-password',
+            'method' => 'put',
+            'useMiddleware' => true
+        ],
+        'emailVerify' => [
+            'pattern' => 'email/verify/{id}/{hash}',
+            'method' => 'post',
+            'useMiddleware' => false
+        ],
+        'emailResend' => [
+            'pattern' => 'email/resend',
+            'method' => 'post',
+            'useMiddleware' => false
+        ],
+        'twoFactorAuthentication' => [
+            'pattern' => 'two-factor-authentication',
+            'method' => 'post',
+            'useMiddleware' => false
+        ],
+        'twoFactorRecoveryCodes' => [
+            'pattern' => 'two-factor-recovery-codes',
+            'method' => 'get',
+            'useMiddleware' => true
+        ],
+        'loginOAuth' => [
+            'pattern' => 'login/{provider}',
+            'method' => 'post',
+            'useMiddleware' => false
+        ],
+        'loginOAuthCallback' => [
+            'pattern' => 'login/{provider}/callback',
+            'method' => 'post',
+            'useMiddleware' => false
+        ],
+        'deactivateAccount' => [
+            'pattern' => 'deactivate-account',
+            'method' => 'post',
+            'useMiddleware' => false
+        ],
+        'impersonate' => [
+            'pattern' => 'impersonate/{user_id}',
+            'method' => 'post',
+            'useMiddleware' => false
+        ],
+        'stopImpersonating' => [
+            'pattern' => 'stop-impersonating',
+            'method' => 'post',
+            'useMiddleware' => false
+        ],
+        'termsOfService' => [
+            'pattern' => 'terms-of-service',
+            'method' => 'get',
+            'useMiddleware' => false
+        ],
+        'privacyPolicy' => [
+            'pattern' => 'privacy-policy',
+            'method' => 'get',
+            'useMiddleware' => false
+        ],
+    ];
+
     /**
      * An array of valid HTTP methods.
      *
@@ -22,30 +127,41 @@ trait Utils
      * @var array
      */
     private array $actions = ['read', 'readOne', 'create', 'update', 'delete', 'deleteAll', 'search'];
+
+    /**
+     * get list of routes that require authentication.
+     * @return array
+     */
+    public static function getAuthRoutes(): array
+    {
+        return static::$authRoutes;
+    }
+
     /**
      * Define a group of routes that require authentication.
      *
      * @param string $pattern The URL pattern for the group of routes.
      * @param mixed $controller The controller for the group of routes.
+     * @param mixed $middleware The middleware for the group of routes.
+     * @param array $forget remove routes from authRoutes
      * @return $this
      */
-    public function auth(string $pattern, $controller): self
+    public function auth(string $pattern, $controller,  $middleware = null, array $forget = []): self
     {
-        $patterns = [
-            'login', 'logout', 'register',
-            'verify/token', 'verify/code', 'verify/url',
-            'reset-password',
-            'send/code-email', 'send/code-phone', 'send/active-url'
-        ];
-        $methods = [
-            'login', 'logout', 'register',
-            'verifyToken', 'verifyCode', 'verifyUrl',
-            'resetPassword',
-            'sendCodeEmail', 'sendCodePhone', 'sendActiveUrl'
-        ];
-        for ($__i__ = 0; $__i__ < count($patterns); $__i__++) {
-            $this->post($this->remakeRoute($pattern) . '/' . $patterns[$__i__], [$controller, $methods[$__i__]]);
+
+        foreach (static::getAuthRoutes() as $methodName => $attributes) {
+            if (!in_array($methodName, $forget)) {
+                $methodHttp = $attributes['method'];
+                $this->$methodHttp(
+                    $this->remakeRoute($pattern) . '/' . $attributes['pattern'],
+                    [$controller, $methodName]
+                );
+                if ($attributes['useMiddleware'] === true && $middleware) {
+                    $this->middleware($middleware);
+                }
+            }
         }
+
         return $this;
     }
 
@@ -90,6 +206,15 @@ trait Utils
                 if (method_exists($controller, $action) && $action === 'read') {
 
                     $this->get($converter->convertToPlural($route), [$controller, 'read']);
+                    if (!empty($middlewares)) {
+                        foreach ($middlewares as $middleware) {
+                            $this->middleware($middleware);
+                        }
+                    }
+                }
+                if (method_exists($controller, $action) && $action === 'readPaging') {
+
+                    $this->get($converter->convertToPlural($route), [$controller, 'readPaging']);
                     if (!empty($middlewares)) {
                         foreach ($middlewares as $middleware) {
                             $this->middleware($middleware);

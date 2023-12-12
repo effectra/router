@@ -1,6 +1,6 @@
 {
   "name": "effectra/router",
-  "description": "The Effectra Routing package.",
+  "description": "The Effectra HTTP Routing package.",
   "type": "library",
   "license": "MIT",
   "autoload": {
@@ -11,7 +11,7 @@
   "authors": [
     {
       "name": "Mohammed Taha",
-      "email": "bmt.mohammedtaha@gmail.com"
+      "email": "info@mohammedtaha.net"
     }
   ],
   "require": {
@@ -20,7 +20,7 @@
     "psr/http-server-handler": "^1.0",
     "psr/http-server-middleware": "^1.0",
     "bmt/plural-converter": "^1.0",
-    "effectra/http-server-handler":"^2.0",
+    "effectra/http-server-handler": "^2.0",
     "effectra/http-message": "^1.0",
     "psr/container": "^2.0"
   },

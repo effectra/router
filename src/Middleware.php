@@ -20,21 +20,27 @@ trait Middleware
     /**
      * Set the middleware to be applied to all routes.
      *
-     * @param string|MiddlewareInterface $middlewareClass The fully-qualified class name of the middleware to be applied.
+     * @param string $middlewareClass The fully-qualified class name of the middleware to be applied.
      * @return self
      * @throws \InvalidArgumentException if the middleware class is not valid.
      */
-    public function middleware(string|MiddlewareInterface $middlewareClass): self
+    public function middleware(string $middlewareClass): self
     {
-        if (!is_subclass_of($middlewareClass, MiddlewareInterface::class)) {
-            throw new InvalidArgumentException("{$middlewareClass} is not a valid middleware class.");
-        }
-
-        $middleware = Resolver::resolveClass($middlewareClass);
-
-        $this->routes[count($this->routes) - 1]['middleware'][] = $middleware;
+        $this->routes[$this->countRoutesLength()]['middleware'][] = $middlewareClass;
 
         return $this;
+    }
+
+    /**
+     * count Routes Length
+     * @return int
+     */
+    private function countRoutesLength()
+    {
+        if(empty($this->routes)){
+            return 0;
+        }
+        return count($this->routes) - 1;
     }
 
     /**

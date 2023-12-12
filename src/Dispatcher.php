@@ -31,7 +31,7 @@ trait Dispatcher
      * @var mixed The value for the not found route.
      */
     protected $notFound;
-    
+
 
     /**
      * Dispatcher constructor.
@@ -68,8 +68,7 @@ trait Dispatcher
 
             if (!$this->notFound) {
 
-               return $this->notFoundResponse();
-
+                return $this->notFoundResponse();
             }
 
             $controller->setCallback($this->notFound);
@@ -78,7 +77,9 @@ trait Dispatcher
         // handle router middlewares
         if (!empty($action['middleware'])) {
 
-            $handler = new RequestHandler($this->response, $action['middleware']);
+            $middlewares = array_map(fn ($m) =>  Resolver::resolveClass($m), $action['middleware']);
+
+            $handler = new RequestHandler($this->response, $middlewares);
 
             $responseMiddleware = $this->runMiddleware($this->request, $handler);
 

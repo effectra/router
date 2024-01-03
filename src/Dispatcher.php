@@ -32,6 +32,10 @@ trait Dispatcher
      */
     protected $notFound;
 
+    /**
+     * @var Callback The Callback class provides methods to retrieve callback functions from various action formats
+     */
+    protected Callback $callback;
 
     /**
      * Dispatcher constructor.

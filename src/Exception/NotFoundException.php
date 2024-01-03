@@ -12,4 +12,5 @@ use Exception;
 class NotFoundException extends Exception
 {
 
+    
 }
